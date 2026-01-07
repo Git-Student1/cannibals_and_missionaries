@@ -18,12 +18,13 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
         return false;
     }
 
-    function create_state(cannibals, missionaries, boat, prev_state) {
+    function create_state(cannibals, missionaries, boat, prev_state, boat_state) {
         let state = {}
         state[c_key] =  cannibals
         state[m_key] =  missionaries
         state[b_key] = boat
         state["prev"] =  prev_state
+        state["boat"] = boat_state
         return state
     }
 
@@ -48,16 +49,17 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
 
 
     function solve_recusively(open_states){
-        function beach_state_to_state(beach_state, beach, prev_state){
+        function beach_state_to_state(beach_state,boat_state, beach, prev_state){
             switch (beach){
                 case 0:
-                    return create_state(beach_state[c_key], beach_state[m_key], 1, prev_state)
+                    return create_state(beach_state[c_key], beach_state[m_key], 1, prev_state, boat_state)
                 case 1:
                     return create_state(
                         initial_state[c_key] - beach_state[c_key],
                         initial_state[m_key] - beach_state[m_key],
                         0,
-                        prev_state)
+                        prev_state,
+                        boat_state)
                 default:
                     throw Error("Unrecognized beach")
             }
@@ -67,6 +69,11 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
         let missionaries
         let cannibals
         let beach = state[b_key]
+        if (state === undefined){
+            console.log("No solution found")
+            return []
+        }
+
         if (problem_completed(state)){
             return state
         }
@@ -85,9 +92,9 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
                 throw Error("Unrecognized beach")
         }
 
-        let beach_states = new_possible_beach_states(cannibals,  missionaries, boat_capacity)
+        let possible_states = new_possible_beach_states(cannibals,  missionaries, boat_capacity)
         let new_states = []
-        beach_states.forEach(beach_state=>new_states.push(beach_state_to_state(beach_state,beach, state)))
+        possible_states.forEach(state_list=>new_states.push(beach_state_to_state(state_list.beach_states,state_list.boat_states,beach, state)))
         new_states = new_states.filter(state=>!known_state(state))
         new_states.forEach(state=>{open_states.push(state); visited_states.push(state)})
         return solve_recusively(open_states)
@@ -97,10 +104,10 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
 
     function new_possible_beach_states(cannibals, missionaries, boat_capacity) {
         function inverted_beach(state){
-            return create_boat_state(initial_state[c_key] - state[c_key], initial_state[m_key] - state[m_key])
+            return create_beach_state(initial_state[c_key] - state[c_key], initial_state[m_key] - state[m_key])
         }
 
-        function create_boat_state(cannibals, missionaries){
+        function create_beach_state(cannibals, missionaries){
             let boat_state = []
             boat_state[m_key] =  missionaries
             boat_state[c_key] = cannibals
@@ -109,7 +116,7 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
         function possible_boat_actions(cannibals, missionaries, boat_capacity, c_i, m_i, arr) {
             if (m_i > missionaries || m_i > boat_capacity) return arr
             if (!(m_i === 0 && c_i === 0)){
-                let boat_state = create_boat_state(c_i, m_i)
+                let boat_state = create_beach_state(c_i, m_i)
                 arr.push(boat_state);
             }
             if (c_i < cannibals && c_i + m_i < boat_capacity) {
@@ -122,8 +129,9 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
         }
         let all_boat_actions = possible_boat_actions(cannibals, missionaries, boat_capacity, 0, 0, [])
 
-        let new_beach_states = all_boat_actions.map(boat =>  create_boat_state(cannibals- boat[c_key], missionaries- boat[m_key]))
-        return new_beach_states.filter(x => missionaries_survive(x))
+        let new_states = all_boat_actions.map(boat =>  {return {beach_states:create_beach_state(cannibals- boat[c_key], missionaries- boat[m_key]), boat_states:boat}})
+
+        return new_states.filter(x => missionaries_survive(x.beach_states))
     }
 
     function steps_as_array(state, steps){
@@ -131,7 +139,6 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
             return steps
         steps.push(state)
         return steps_as_array(state["prev"], steps)
-
     }
 
 
