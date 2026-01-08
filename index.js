@@ -208,8 +208,9 @@ async function start_animation() {
 
     console.log("start cannibals-and-missionaries animation")
     while (steps.length > 0) {
-
-        await sleep(2000)
+        console.log()
+        console.log("missionaries", missionaries_start,missionaries_goal)
+        await sleep(1000)
         if (run) {
             console.log("next step")
             const step = steps.shift()
@@ -222,18 +223,32 @@ async function start_animation() {
 
                 const moving_cannibals =  cannibals_start.splice(cannibals_start.length - c_transport, cannibals_start.length)
                 const moving_missionaries =  missionaries_start.splice(missionaries_start.length - m_transport, missionaries_start.length)
+
                 const passengers = moving_cannibals.concat(moving_missionaries)
                 move_passengers_to_boat(boat, passengers)
                 move_boat(boat, passengers)
 
                 missionaries_goal.push(...moving_missionaries)
                 cannibals_goal.push(...moving_cannibals)
-                await sleep(1000)
+                await sleep(1200)
                 position_people_on_beach(missionaries_goal, cannibals_goal, goal_beach_properties, space_in_between_people)
 
             }
             else{
+                const c_transport = boat_action.c
+                const m_transport = boat_action.m
 
+                const moving_cannibals =  cannibals_goal.splice(cannibals_goal.length - c_transport, cannibals_goal.length)
+                const moving_missionaries =  missionaries_goal.splice(missionaries_goal.length - m_transport, missionaries_goal.length)
+
+                const passengers = moving_cannibals.concat(moving_missionaries)
+                move_passengers_to_boat(boat, passengers)
+                move_boat(boat, passengers)
+
+                missionaries_start.push(...moving_missionaries)
+                cannibals_start.push(...moving_cannibals)
+                await sleep(1200)
+                position_people_on_beach(missionaries_start, cannibals_start, start_beach_properties, space_in_between_people)
             }
 
             boat.is_at_start = !boat.is_at_start
