@@ -84,14 +84,15 @@ async function start_animation() {
         let path_length = end_x-start_x
         boat.is_at_start = true
         boat.center_x = function (){
-            return boat.body.attr("x") - boat.body.attr("width")/2
+            return boat.body.attr("x") + boat.body.attr("width")/2
         }
         boat.first_row_y = function (){
-            return boat.body.attr("y") - boat.body.attr("height")/4
+            return boat.body.attr("y") + boat.body.attr("height")/4
         }
         boat.second_row_y = function (){
-            return boat.body.attr("y") - boat.body.attr("height")*3/4
+            return boat.body.attr("y") + boat.body.attr("height")*3/4
         }
+        boat.width =  function (){ return boat.body.attr("width")}
 
         boat.next_x_move = function (){
             if (boat.is_at_start){
@@ -121,32 +122,50 @@ async function start_animation() {
 
 
 
-    function createDrawnPerson(draw, x,y, max_size, is_cannibal, color) {
-        function createDrawnBody(draw, x, y, diameter) {
-            return draw.circle(diameter).fill(color).center(x, y)
+    function createDrawnPerson(draw, max_size, is_cannibal, color) {
+        function createDrawnBody(draw, diameter) {
+            return draw.circle(diameter).fill(color)
         }
-        const elemBody = createDrawnBody(draw, x,y, max_size)
+        const elemBody = createDrawnBody(draw, max_size)
         return {
             is_cannibal:is_cannibal,
             body:elemBody
         }
     }
 
-    function createDrawnElements(draw, x_center, y_center, diameter, n, color){
+    function createDrawnPeople(draw, x_center, y_center, diameter, n, color){
         const elements = []
-        const buffer = diameter*0.2
-        const start_y = y_center - (n/2)*(diameter+ buffer)
         for (let i = 0; i < n; i++) {
-            const x = x_center
-            const y = start_y + i*(diameter + buffer)
-            elements[elements.length] = createDrawnPerson(draw, x, y , diameter, true,  color );
+            elements[elements.length] = createDrawnPerson(draw, diameter, true,  color );
         }
         return elements
     }
 
-    const cannibals_start = createDrawnElements(draw, start_beach_properties.center_x(), start_beach_properties.center_y(), people_size, n_cannibals, "red")
-    const missionaries_start =  createDrawnElements(draw, start_beach_properties.center_x()+people_size*1.2, start_beach_properties.center_y(), people_size, n_cannibals, "blue")
+    function positionPeople(people, x_center, y_center,  space_in_between) {
+        console.log("people", people)
+        const start_y = y_center - (people.length/2)*space_in_between
+        for (let i = 0; i < people.length; i++) {
+            const x = x_center
+            const y = start_y + i*space_in_between
+            people[i].body.center(x, y);
+        }
+    }
 
+
+
+    function position_people_on_beach(cannibals, missionaries, beach_properties, space_in_between) {
+
+        positionPeople(cannibals, beach_properties.center_x(), beach_properties.center_y(),space_in_between)
+        positionPeople(missionaries,beach_properties.center_x()+space_in_between, beach_properties.center_y(), space_in_between)
+    }
+
+
+
+
+    const cannibals_start = createDrawnPeople(draw, start_beach_properties.center_x(), start_beach_properties.center_y(), people_size, n_cannibals, "red")
+    const missionaries_start =  createDrawnPeople(draw, start_beach_properties.center_x()+people_size*1.2, start_beach_properties.center_y(), people_size, n_cannibals, "blue")
+    const space_in_between_people = people_size*1.2
+    position_people_on_beach(cannibals_start, missionaries_start, start_beach_properties, space_in_between_people)
 
     const cannibals_goal = []
     const missionaries_goal = []
@@ -157,7 +176,6 @@ async function start_animation() {
 
     function move_boat(boat, passengers){
         function move(drawn_obj, movement_x){
-            console.log("move object", drawn_obj)
             drawn_obj.animate({
                 duration: 1000,
                 when: 'now',})
@@ -171,8 +189,18 @@ async function start_animation() {
     }
 
     function move_passengers_to_boat(boat, passengers){
-
+        let i = -passengers.length/2
+        for (const passenger of  passengers){
+            const x = boat.center_x() + ((boat.width()*0.8)/(passengers.length +2))*i
+            const y = boat.first_row_y()
+            const x_diff =  passenger.body.attr("x") - x
+            const y_diff =  passenger.body.attr("y") - y
+            passenger.body.center(x, y)
+            i++
+        }
     }
+
+
 
     function transfer_people(){
 
@@ -194,9 +222,14 @@ async function start_animation() {
 
                 const moving_cannibals =  cannibals_start.splice(cannibals_start.length - c_transport, cannibals_start.length)
                 const moving_missionaries =  missionaries_start.splice(missionaries_start.length - m_transport, missionaries_start.length)
+                const passengers = moving_cannibals.concat(moving_missionaries)
+                move_passengers_to_boat(boat, passengers)
+                move_boat(boat, passengers)
 
-                move_boat(boat, moving_cannibals.concat(moving_missionaries))
-
+                missionaries_goal.push(...moving_missionaries)
+                cannibals_goal.push(...moving_cannibals)
+                await sleep(1000)
+                position_people_on_beach(missionaries_goal, cannibals_goal, goal_beach_properties, space_in_between_people)
 
             }
             else{
