@@ -1,4 +1,4 @@
-function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
+export function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
     let m_key = "m"
     let c_key = "c"
     let b_key = "b"
@@ -13,7 +13,6 @@ function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
                 && state[b_key] === visited_state[b_key]){
                 return true
             }
-
         }
         return false;
     }
