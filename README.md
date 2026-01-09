@@ -1,3 +1,11 @@
+# About
+Solution for the Canniabls and Missionaries Problem. 
+
+A problem explanation can be found here: https://en.wikipedia.org/wiki/Missionaries_and_cannibals_problem
+
+The focus lies in the problem solution and NOT the design. (The design could be improved).
+
+
 # How to start
 1. Open Server.
 ```bash
