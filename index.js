@@ -6,10 +6,18 @@ const resultLabelId =  "result"
 
 
 
+
+
+
 document.getElementById(stopGoButtonId).onclick = start_animation;
 const draw = SVG().addTo('#drawing')
 let run = false;
 
+const speed_input = document.getElementById('speed')
+const speed_value = document.getElementById('speed_value')
+speed_input.addEventListener("input", (event) => {
+    speed_value.textContent = event.target.value;
+});
 
 
 //-------------- THIS IS THE MAIN LOOP, AS SUCH IT IS NOT ENTIRELY PURE --------------------------
@@ -139,14 +147,14 @@ async function start_animation() {
         }
     }
 
-    async function cross_river(cannibals, missionaries, other_beach_cannibals, other_beach_missionaries, cannibals_to_transport, missionaries_to_transport, end_beach_properties, space_in_between_people) {
-        const animation_duration = 1000
+    async function cross_river(cannibals, missionaries, other_beach_cannibals, other_beach_missionaries, cannibals_to_transport, missionaries_to_transport, end_beach_properties, space_in_between_people, t) {
+        const animation_duration = 1000*t
         const moving_cannibals = cannibals.splice(cannibals.length - cannibals_to_transport, cannibals.length)
         const moving_missionaries = missionaries.splice(missionaries.length - missionaries_to_transport, missionaries.length)
 
         const passengers = moving_cannibals.concat(moving_missionaries)
         move_cannibals_and_missions_to_boat(boat, moving_cannibals, moving_missionaries)
-        await sleep(100)
+        await sleep(100*t)
         move_boat(boat, passengers, animation_duration)
 
         other_beach_missionaries.push(...moving_missionaries)
@@ -163,6 +171,8 @@ async function start_animation() {
     const n_cannibals = Number(document.getElementById('cannibal_count').value);
     const n_missionaries = Number(document.getElementById('missionary_count').value);
     const boat_capacity = Number(document.getElementById('boat_capacity').value);
+
+
 
     console.log("n_missionaries", n_missionaries)
 
@@ -234,14 +244,15 @@ async function start_animation() {
                 , size:     100
                 , anchor:   'middle'
                 , leading:  '1.5em'
-            }).rotate(35, 0, 0).move(30, 0)
+            }).move(60, 0).rotate(35, 0, 0)
         }
         return
     }
 
     console.log("start cannibals-and-missionaries animation")
     while (steps.length > 0) {
-        await sleep(1000)
+        const t = 1/Number(document.getElementById('speed').value);
+        await sleep(1000*t)
         if (run) {
             console.log("next step")
             const step = steps.shift()
@@ -251,10 +262,10 @@ async function start_animation() {
             const m_transport = boat_action.m
 
             if (boat.is_at_start){
-                await cross_river(cannibals_start, missionaries_start, missionaries_goal, cannibals_goal, c_transport, m_transport, goal_beach_properties, space_in_between_people)
+                await cross_river(cannibals_start, missionaries_start, missionaries_goal, cannibals_goal, c_transport, m_transport, goal_beach_properties, space_in_between_people, t)
             }
             else{
-                await cross_river(missionaries_goal, cannibals_goal,cannibals_start, missionaries_start , c_transport, m_transport,  start_beach_properties, space_in_between_people)
+                await cross_river(missionaries_goal, cannibals_goal,cannibals_start, missionaries_start , c_transport, m_transport,  start_beach_properties, space_in_between_people,t)
             }
             boat.is_at_start = !boat.is_at_start
         }
