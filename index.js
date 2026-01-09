@@ -25,13 +25,6 @@ async function start_animation() {
         }
     }
 
-    console.log("setup initialised")
-    document.getElementById(stopGoButtonId).innerText = "stop"
-    document.getElementById(stopGoButtonId).onclick = go_stop;
-
-
-
-
 
     function create_drawn_obj(properties, color){
         return {body:draw.rect({
@@ -49,11 +42,14 @@ async function start_animation() {
         boat.center_x = function (){
             return boat.body.attr("x") + boat.body.attr("width")/2
         }
-        boat.first_row_y = function (){
+        boat.upper_row_y = function (){
             return boat.body.attr("y") + boat.body.attr("height")/4
         }
-        boat.second_row_y = function (){
+        boat.lower_row_y = function (){
             return boat.body.attr("y") + boat.body.attr("height")*3/4
+        }
+        boat.center_y = function (){
+            return boat.body.attr("y") + boat.body.attr("height")/2
         }
         boat.width =  function (){ return boat.body.attr("width")}
 
@@ -117,11 +113,24 @@ async function start_animation() {
         }
     }
 
-    function move_passengers_to_boat(boat, passengers){
-        let i = -passengers.length/2
+    function move_cannibals_and_missions_to_boat(boat, cannibals, missionaries){
+        if (cannibals.length===0)
+            move_passengers_to_boat(boat, missionaries, undefined)
+        else if (missionaries.length===0)
+            move_passengers_to_boat(boat, cannibals, undefined)
+        else {
+            move_passengers_to_boat(boat, cannibals, true)
+            move_passengers_to_boat(boat, missionaries, false)
+        }
+    }
+
+    function move_passengers_to_boat(boat, passengers, top){
+        let i = -(passengers.length-1)/2
         for (const passenger of  passengers){
             const x = boat.center_x() + ((boat.width()*0.8)/(passengers.length +2))*i
-            const y = passenger.is_cannibal?boat.first_row_y():boat.second_row_y()
+            let y = top?boat.upper_row_y():boat.lower_row_y()
+            if (top === undefined)
+                y = boat.center_y()
             console.log("y",y)
             const x_diff =  passenger.body.attr("x") - x
             const y_diff =  passenger.body.attr("y") - y
@@ -136,7 +145,7 @@ async function start_animation() {
         const moving_missionaries = missionaries.splice(missionaries.length - missionaries_to_transport, missionaries.length)
 
         const passengers = moving_cannibals.concat(moving_missionaries)
-        move_passengers_to_boat(boat, passengers)
+        move_cannibals_and_missions_to_boat(boat, moving_cannibals, moving_missionaries)
         await sleep(100)
         move_boat(boat, passengers, animation_duration)
 
@@ -145,6 +154,10 @@ async function start_animation() {
         await sleep(animation_duration+100)
         position_people_on_beach(other_beach_cannibals,other_beach_missionaries,  end_beach_properties, space_in_between_people)
     }
+
+    console.log("setup initialised")
+    document.getElementById(stopGoButtonId).innerText = "stop"
+    document.getElementById(stopGoButtonId).onclick = go_stop;
 
 
     const n_cannibals = Number(document.getElementById('cannibal_count').value);
@@ -213,13 +226,15 @@ async function start_animation() {
         steps = cannibal_problem(n_cannibals, n_missionaries, boat_capacity)
         steps.shift()
     }catch (e){
+        console.log("Error")
         if (e instanceof NoSolutionError){
-            draw.text("No Solution for the Parameters").font({
+            console.log("No solution")
+            draw.text("No Solution for these Parameters").font({
                 family:   'Helvetica'
-                , size:     144
+                , size:     100
                 , anchor:   'middle'
                 , leading:  '1.5em'
-            }).move(200, 200)
+            }).rotate(35, 0, 0).move(30, 0)
         }
         return
     }

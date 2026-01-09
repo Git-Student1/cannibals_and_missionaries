@@ -1,3 +1,5 @@
+import {NoSolutionError} from "./exceptions.js";
+
 export function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
     let m_key = "m"
     let c_key = "c"
@@ -66,7 +68,7 @@ export function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
 
         if (state === undefined){
             console.log("No solution found")
-            throw Error
+            throw new NoSolutionError("")
         }
         let beach = state[b_key]
         if (problem_completed(state)){
