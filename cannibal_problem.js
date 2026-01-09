@@ -137,8 +137,3 @@ export function cannibal_problem(n_cannibals, n_missionaries, boat_capacity) {
 
     return steps_as_array(solve_recusively([initial_state]), []).reverse()
 }
-
-
-
-
-console.log(cannibal_problem(3,3, 2))
