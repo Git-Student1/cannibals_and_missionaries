@@ -1,5 +1,6 @@
 import { SVG } from "https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js/+esm";
 import {cannibal_problem} from "./cannibal_problem.js";
+import {NoSolutionError} from "./exceptions.js";
 const stopGoButtonId = "go_stop"
 const resultLabelId =  "result"
 
@@ -29,6 +30,7 @@ async function start_animation() {
     document.getElementById(stopGoButtonId).onclick = go_stop;
 
     const n_cannibals = document.getElementById('cannibal_count').value;
+    const n_missionaries = document.getElementById('missionary_count').value;
     const boat_capacity = document.getElementById('boat_capacity').value;
 
 
@@ -122,18 +124,19 @@ async function start_animation() {
 
 
 
-    function createDrawnPerson(draw, max_size, is_cannibal, color) {
-        function createDrawnBody(draw, diameter) {
-            return draw.circle(diameter).fill(color)
-        }
-        const elemBody = createDrawnBody(draw, max_size)
-        return {
-            is_cannibal:is_cannibal,
-            body:elemBody
-        }
-    }
+
 
     function createDrawnPeople(draw, x_center, y_center, diameter, n, color){
+        function createDrawnPerson(draw, max_size, is_cannibal, color) {
+            function createDrawnBody(draw, diameter) {
+                return draw.circle(diameter).fill(color)
+            }
+            const elemBody = createDrawnBody(draw, max_size)
+            return {
+                is_cannibal:is_cannibal,
+                body:elemBody
+            }
+        }
         const elements = []
         for (let i = 0; i < n; i++) {
             elements[elements.length] = createDrawnPerson(draw, diameter, true,  color );
@@ -141,20 +144,20 @@ async function start_animation() {
         return elements
     }
 
-    function positionPeople(people, x_center, y_center,  space_in_between) {
-        console.log("people", people)
-        const start_y = y_center - (people.length/2)*space_in_between
-        for (let i = 0; i < people.length; i++) {
-            const x = x_center
-            const y = start_y + i*space_in_between
-            people[i].body.center(x, y);
-        }
-    }
+
 
 
 
     function position_people_on_beach(cannibals, missionaries, beach_properties, space_in_between) {
-
+        function positionPeople(people, x_center, y_center,  space_in_between) {
+            console.log("people", people)
+            const start_y = y_center - (people.length/2)*space_in_between
+            for (let i = 0; i < people.length; i++) {
+                const x = x_center
+                const y = start_y + i*space_in_between
+                people[i].body.center(x, y);
+            }
+        }
         positionPeople(cannibals, beach_properties.center_x(), beach_properties.center_y(),space_in_between)
         positionPeople(missionaries,beach_properties.center_x()+space_in_between, beach_properties.center_y(), space_in_between)
     }
@@ -171,13 +174,28 @@ async function start_animation() {
     const missionaries_goal = []
 
     run = true
-    let steps = cannibal_problem(n_cannibals, n_cannibals, boat_capacity)
-    steps.shift()
+    let steps
+    try{
+        steps = cannibal_problem(n_cannibals, n_cannibals, boat_capacity)
+        steps.shift()
+    }catch (e){
+        if (e instanceof NoSolutionError){
+            draw.text("No Solution for the Parameters").font({
+                family:   'Helvetica'
+                , size:     144
+                , anchor:   'middle'
+                , leading:  '1.5em'
+            }).move(200, 200)
+        }
+        return
+    }
 
-    function move_boat(boat, passengers){
+
+
+    function move_boat(boat, passengers, duration){
         function move(drawn_obj, movement_x){
             drawn_obj.animate({
-                duration: 1000,
+                duration: duration,
                 when: 'now',})
                 .dmove(movement_x, 0)
         }
@@ -192,7 +210,10 @@ async function start_animation() {
         let i = -passengers.length/2
         for (const passenger of  passengers){
             const x = boat.center_x() + ((boat.width()*0.8)/(passengers.length +2))*i
-            const y = boat.first_row_y()
+
+
+
+            const y = passenger.is_cannibal?boat.first_row_y():boat.second_row_y()
             const x_diff =  passenger.body.attr("x") - x
             const y_diff =  passenger.body.attr("y") - y
             passenger.body.center(x, y)
@@ -202,8 +223,18 @@ async function start_animation() {
 
 
 
-    function transfer_people(){
+     function transfer_people(cannibals, missionaries, other_beach_cannibals, other_beach_missionaries, cannibals_to_transport, missionaries_to_transport) {
+        const animation_duration = 1000
+        const moving_cannibals = cannibals.splice(cannibals.length - cannibals_to_transport, cannibals.length)
+        const moving_missionaries = missionaries.splice(missionaries.length - missionaries_to_transport, missionaries.length)
 
+        const passengers = moving_cannibals.concat(moving_missionaries)
+        move_passengers_to_boat(boat, passengers)
+        move_boat(boat, passengers, animation_duration)
+
+        other_beach_missionaries.push(...moving_missionaries)
+        other_beach_cannibals.push(...moving_cannibals)
+        sleep(animation_duration)
     }
 
     console.log("start cannibals-and-missionaries animation")
@@ -217,43 +248,18 @@ async function start_animation() {
 
             const boat_action = step.boat
             console.log(step)
+            const c_transport = boat_action.c
+            const m_transport = boat_action.m
+
             if (boat.is_at_start){
-                const c_transport = boat_action.c
-                const m_transport = boat_action.m
-
-                const moving_cannibals =  cannibals_start.splice(cannibals_start.length - c_transport, cannibals_start.length)
-                const moving_missionaries =  missionaries_start.splice(missionaries_start.length - m_transport, missionaries_start.length)
-
-                const passengers = moving_cannibals.concat(moving_missionaries)
-                move_passengers_to_boat(boat, passengers)
-                move_boat(boat, passengers)
-
-                missionaries_goal.push(...moving_missionaries)
-                cannibals_goal.push(...moving_cannibals)
-                await sleep(1200)
+                await transfer_people(cannibals_start, missionaries_start, missionaries_goal, cannibals_goal, c_transport, m_transport)
                 position_people_on_beach(missionaries_goal, cannibals_goal, goal_beach_properties, space_in_between_people)
-
             }
             else{
-                const c_transport = boat_action.c
-                const m_transport = boat_action.m
-
-                const moving_cannibals =  cannibals_goal.splice(cannibals_goal.length - c_transport, cannibals_goal.length)
-                const moving_missionaries =  missionaries_goal.splice(missionaries_goal.length - m_transport, missionaries_goal.length)
-
-                const passengers = moving_cannibals.concat(moving_missionaries)
-                move_passengers_to_boat(boat, passengers)
-                move_boat(boat, passengers)
-
-                missionaries_start.push(...moving_missionaries)
-                cannibals_start.push(...moving_cannibals)
-                await sleep(1200)
+                await transfer_people(missionaries_goal, cannibals_goal,cannibals_start, missionaries_start , c_transport, m_transport)
                 position_people_on_beach(missionaries_start, cannibals_start, start_beach_properties, space_in_between_people)
             }
-
             boat.is_at_start = !boat.is_at_start
-
-
         }
     }
 
